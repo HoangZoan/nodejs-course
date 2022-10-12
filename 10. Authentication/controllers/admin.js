@@ -9,15 +9,17 @@ exports.getAddProduct = (req, res, next) => {
     editing: false,
     hasError: false,
     errorMessage: null,
+    validationErrors: [],
   });
 };
 
 exports.postAddProduct = (req, res, next) => {
   const title = req.body.title;
-  const imageUrl = req.body.imageUrl;
+  const imageUrl = req.file;
   const price = req.body.price;
   const description = req.body.description;
   const errors = validationResult(req);
+  console.log(imageUrl);
 
   if (!errors.isEmpty()) {
     return res.status(422).render("admin/edit-product", {
@@ -32,6 +34,7 @@ exports.postAddProduct = (req, res, next) => {
         description,
       },
       errorMessage: errors.array()[0].msg,
+      validationErrors: [],
     });
   }
 
@@ -45,12 +48,14 @@ exports.postAddProduct = (req, res, next) => {
   product
     .save()
     .then((result) => {
-      // console.log(result);
       console.log("Created Product");
       res.redirect("/admin/products");
     })
     .catch((err) => {
-      console.log(err);
+      // res.redirect("/500");
+      const error = new Error(err);
+      error.httpStatusCode = 500;
+      return next(error);
     });
 };
 
@@ -72,6 +77,7 @@ exports.getEditProduct = (req, res, next) => {
         product: product,
         hasError: false,
         errorMessage: null,
+        validationErrors: [],
       });
     })
     .catch((err) => console.log(err));
@@ -83,6 +89,25 @@ exports.postEditProduct = (req, res, next) => {
   const updatedPrice = req.body.price;
   const updatedImageUrl = req.body.imageUrl;
   const updatedDesc = req.body.description;
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(422).render("admin/edit-product", {
+      pageTitle: "Edit Product",
+      path: "/admin/edit-product",
+      editing: true,
+      hasError: true,
+      product: {
+        title: updatedTitle,
+        imageUrl: updatedImageUrl,
+        price: updatedPrice,
+        description: updatedDesc,
+        _id: prodId,
+      },
+      errorMessage: errors.array()[0].msg,
+      validationErrors: errors.array(),
+    });
+  }
 
   Product.findById(prodId)
     .then((product) => {
